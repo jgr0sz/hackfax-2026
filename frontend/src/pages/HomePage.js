@@ -238,7 +238,7 @@ function HomePage() {
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-12 z-10">
         <header className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-28 items-center justify-center sm:h-20 sm:w-36">
+            <div className="flex h-28 w-44 items-center justify-center sm:h-40 sm:w-64 md:h-44 md:w-68">
               <img
                 src={gmuLogo}
                 alt="Patriot Radar logo"
