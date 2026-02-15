@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import gmuLogo from '../assets/patriot-radar-logo.png';
 
 function HomePage() {
@@ -11,9 +9,6 @@ function HomePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
   const liveRegionRef = useRef(null);
-  const mapPreviewRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const previewMarkersRef = useRef([]);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -168,64 +163,6 @@ function HomePage() {
     const intervalId = window.setInterval(() => fetchFeed(userCoords), 30000);
     return () => window.clearInterval(intervalId);
   }, [fetchFeed, userCoords]);
-
-  // Initialize and update map preview
-  useEffect(() => {
-    if (!mapPreviewRef.current) return;
-
-    // Initialize map if not already done
-    if (!mapInstanceRef.current) {
-      const apiKey = process.env.REACT_APP_API_KEY;
-      if (!apiKey) return;
-
-      mapInstanceRef.current = new maplibregl.Map({
-        container: mapPreviewRef.current,
-        style: `https://api.maptiler.com/maps/streets/style.json?key=${apiKey}`,
-        center: [userCoords?.longitude || -77.1, userCoords?.latitude || 38.8],
-        zoom: 14,
-        attributionControl: false,
-      });
-    }
-
-    // Clear existing markers
-    previewMarkersRef.current.forEach(m => m.remove());
-    previewMarkersRef.current = [];
-
-    // Add markers for all feed items
-    if (feedItems.length > 0) {
-      const bounds = new maplibregl.LngLatBounds();
-      
-      feedItems.forEach(({ report }) => {
-        if (report.location) {
-          const { latitude, longitude } = report.location;
-          if (latitude != null && longitude != null) {
-            // Create marker element
-            const markerEl = document.createElement('div');
-            markerEl.className = 'w-6 h-6 rounded-full bg-green-500 border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform';
-            markerEl.style.backgroundColor = report.severity === 'high' ? '#dc2626' : report.severity === 'medium' ? '#f59e0b' : '#10b981';
-
-            const marker = new maplibregl.Marker({ element: markerEl })
-              .setLngLat([longitude, latitude])
-              .addTo(mapInstanceRef.current);
-
-            previewMarkersRef.current.push(marker);
-            bounds.extend([longitude, latitude]);
-          }
-        }
-      });
-
-      // Fit bounds to show all markers
-      if (bounds.getNorthEast().lng !== bounds.getSouthWest().lng) {
-        mapInstanceRef.current.fitBounds(bounds, { padding: 40 });
-      }
-    } else if (userCoords) {
-      // If no feed items, center on user
-      mapInstanceRef.current.flyTo({
-        center: [userCoords.longitude, userCoords.latitude],
-        zoom: 14
-      });
-    }
-  }, [feedItems, userCoords]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--surface)] text-[var(--ink)]">
@@ -384,62 +321,28 @@ function HomePage() {
             </div>
             <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-6">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,84,63,0.2),transparent_50%)]" />
-              <div className="relative grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-                <div className="space-y-3">
-                  <h2 className="text-xl font-semibold sm:text-2xl">Fast incident response</h2>
-                  <p className="text-sm text-black/65 sm:text-base">
-                    Pinpoint a location, submit details, and keep the community informed in real time.
-                  </p>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Link
-                      to="/map"
-                      className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--accent-dark)]"
-                      aria-label="Open map to report an incident"
-                      tabIndex={0}
-                    >
-                      Open Map
-                    </Link>
-                    <Link
-                      to="/reports"
-                      className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs font-semibold text-black/70 transition hover:bg-white"
-                      aria-label="View all incident reports"
-                      tabIndex={0}
-                    >
-                      View Reports
-                    </Link>
-                  </div>
-                </div>
-                <div 
-                  className="relative min-h-[220px] rounded-xl border border-black/10 bg-white/70 shadow-inner overflow-hidden"
-                  aria-label="Map preview showing all incident locations"
-                  role="img"
-                >
-                  <div ref={mapPreviewRef} className="absolute inset-0 z-0" />
-                  {!process.env.REACT_APP_API_KEY && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10">
-                      <span className="text-xs font-semibold text-black/60">Map unavailable</span>
-                    </div>
-                  )}
-                  {/* Screen reader description of incidents on map */}
-                  <div className="sr-only" aria-live="polite" aria-atomic="true">
-                    Map showing {feedItems.length} incident{feedItems.length !== 1 ? 's' : ''} nearby.
-                    {feedItems.length > 0 && (
-                      <>
-                        <strong>Incidents:</strong>
-                        <ul>
-                          {feedItems.slice(0, 5).map(({ report, distance_miles }) => (
-                            <li key={report.id}>
-                              {report.severity} severity incident at {report.address || 'Unknown location'}, {distance_miles} miles away
-                            </li>
-                          ))}
-                          {feedItems.length > 5 && <li>and {feedItems.length - 5} more incidents</li>}
-                        </ul>
-                      </>
-                    )}
-                    <Link to="/map" className="underline">
-                      Open full map with report details
-                    </Link>
-                  </div>
+              <div className="relative space-y-4">
+                <h2 className="text-xl font-semibold sm:text-2xl">Fast incident response</h2>
+                <p className="text-sm text-black/65 sm:text-base">
+                  Pinpoint a location, submit details, and keep the community informed in real time.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    to="/map"
+                    className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--accent-dark)]"
+                    aria-label="Open map to report an incident"
+                    tabIndex={0}
+                  >
+                    Open Map
+                  </Link>
+                  <Link
+                    to="/reports"
+                    className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs font-semibold text-black/70 transition hover:bg-white"
+                    aria-label="View all incident reports"
+                    tabIndex={0}
+                  >
+                    View Reports
+                  </Link>
                 </div>
               </div>
             </div>

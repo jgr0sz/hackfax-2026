@@ -353,7 +353,6 @@ function MapPage() {
       });
 
       mapRef.current.on('click', (e) => {
-        if (!formOpen) return;
         const clicked = {
           latitude: e.lngLat.lat,
           longitude: e.lngLat.lng,
