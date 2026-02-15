@@ -7,36 +7,18 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AccessibilityHub from './components/AccessibilityHub';
 
-function Navigation() {
+function Navigation({ currentUser, loading, onLogout }) {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchUser = useCallback(async () => {
-    try {
-      const res = await fetch('/api/me', { credentials: 'same-origin' });
-      const data = await res.json().catch(() => ({}));
-      setCurrentUser(data.user || null);
-    } catch (err) {
-      setCurrentUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const handleLogout = useCallback(async () => {
     try {
       await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
-      setCurrentUser(null);
+      onLogout();
       navigate('/login');
     } catch (err) {
       console.error('Logout failed:', err);
     }
-  }, [navigate]);
-
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+  }, [navigate, onLogout]);
 
   return (
     <nav 
@@ -126,10 +108,33 @@ function Navigation() {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/me', { credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      setCurrentUser(data.user || null);
+    } catch (err) {
+      setCurrentUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setCurrentUser(null);
+  }, []);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navigation />
+        <Navigation currentUser={currentUser} loading={loading} onLogout={handleLogout} />
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-blue-600 focus:text-white">
           Skip to main content
         </a>
@@ -138,8 +143,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<SignupPage />} />
+            <Route path="/login" element={<LoginPage onLoginSuccess={fetchUser} />} />
+            <Route path="/register" element={<SignupPage onSignupSuccess={fetchUser} />} />
           </Routes>
         </main>
         <AccessibilityHub />

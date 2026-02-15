@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-function SignupPage() {
+function SignupPage({ onSignupSuccess }) {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -55,6 +55,9 @@ function SignupPage() {
         return;
       }
       setSuccess('Account created! You can sign in now.');
+      if (onSignupSuccess) {
+        await onSignupSuccess();
+      }
     } catch (err) {
       setError('Network error');
     }
