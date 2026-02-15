@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 function SignupPage() {
@@ -9,6 +9,8 @@ function SignupPage() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const errorRef = useRef(null);
+  const successRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,18 +65,32 @@ function SignupPage() {
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/10 p-8 shadow-2xl">
         <h1 className="text-xl font-semibold text-center mb-6">Create account</h1>
         {error && (
-          <div className="mb-4 rounded-lg border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm text-red-200">
+          <div 
+            ref={errorRef}
+            role="alert"
+            aria-live="assertive"
+            className="mb-4 rounded-lg border border-red-400/60 bg-red-500/20 px-3 py-2 text-sm text-red-200 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400"
+            tabIndex={-1}
+          >
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 rounded-lg border border-emerald-400/60 bg-emerald-500/20 px-3 py-2 text-sm text-emerald-200">
+          <div 
+            ref={successRef}
+            role="status"
+            aria-live="polite"
+            className="mb-4 rounded-lg border border-emerald-400/60 bg-emerald-500/20 px-3 py-2 text-sm text-emerald-200 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+            tabIndex={-1}
+          >
             {success}
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" aria-label="Sign up form">
           <div>
-            <label className="block text-xs text-white/70 mb-1" htmlFor="username">Username</label>
+            <label className="block text-xs text-white/70 mb-1" htmlFor="username">
+              Username <span className="text-red-400" aria-label="required">*</span>
+            </label>
             <input
               id="username"
               name="username"
@@ -85,11 +101,18 @@ function SignupPage() {
               autoComplete="username"
               minLength={2}
               required
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus-visible:outline focus-visible:outline-sky-400"
+              aria-required="true"
+              aria-describedby="username-help"
             />
+            <div id="username-help" className="sr-only">
+              Username must be at least 2 characters
+            </div>
           </div>
           <div>
-            <label className="block text-xs text-white/70 mb-1" htmlFor="email">Email</label>
+            <label className="block text-xs text-white/70 mb-1" htmlFor="email">
+              Email <span className="text-red-400" aria-label="required">*</span>
+            </label>
             <input
               id="email"
               name="email"
@@ -99,11 +122,15 @@ function SignupPage() {
               placeholder="you@example.com"
               autoComplete="email"
               required
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus-visible:outline focus-visible:outline-sky-400"
+              aria-required="true"
+              aria-label="Email address"
             />
           </div>
           <div>
-            <label className="block text-xs text-white/70 mb-1" htmlFor="password">Password</label>
+            <label className="block text-xs text-white/70 mb-1" htmlFor="password">
+              Password <span className="text-red-400" aria-label="required">*</span>
+            </label>
             <input
               id="password"
               name="password"
@@ -114,18 +141,24 @@ function SignupPage() {
               autoComplete="new-password"
               minLength={6}
               required
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus-visible:outline focus-visible:outline-sky-400"
+              aria-required="true"
+              aria-describedby="password-help"
             />
+            <div id="password-help" className="sr-only">
+              Password must be at least 6 characters
+            </div>
           </div>
           <button
             type="submit"
-            className="w-full rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-sky-300"
+            className="w-full rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-sky-300 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300"
+            aria-label="Create your account"
           >
             Sign up
           </button>
         </form>
         <p className="mt-4 text-center text-xs text-white/60">
-          Already have an account? <Link to="/login" className="text-sky-300 underline">Sign in</Link>
+          Already have an account? <Link to="/login" className="text-sky-300 underline focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 rounded px-1">Sign in</Link>
         </p>
       </div>
     </div>

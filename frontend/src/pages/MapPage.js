@@ -472,20 +472,18 @@ function MapPage() {
     <h3 className="text-sm font-semibold">Feed (within 0.5 mi)</h3>
   ), []);
 
-  if (!apiKey) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="max-w-md text-center text-sm text-gray-700">
-          <p className="font-semibold">Missing API key</p>
-          <p>Add REACT_APP_API_KEY to frontend/.env and restart the dev server.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative h-screen w-full">
-      <div ref={mapContainerRef} className="h-full w-full" />
+      <div
+        ref={mapContainerRef}
+        className={`h-full w-full ${apiKey ? '' : 'bg-gray-100'}`}
+      />
+
+      {!apiKey && (
+        <div className="absolute left-4 right-4 top-4 z-20 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 md:left-4 md:right-auto md:max-w-xs">
+          Map is unavailable. Add `REACT_APP_API_KEY` to `frontend/.env` and restart the dev server to enable pins.
+        </div>
+      )}
 
       <div className="absolute left-4 right-4 top-4 z-10 flex max-h-[70vh] w-auto flex-col gap-3 font-sans md:left-auto md:right-4 md:top-4 md:max-h-[calc(100vh-28px)] md:w-[340px]">
         <div className="rounded-xl bg-white/95 p-3 shadow-lg">
