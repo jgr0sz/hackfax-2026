@@ -40,34 +40,37 @@ function Navigation() {
 
   return (
     <nav 
-      className="bg-black text-white shadow-lg font-figtree font-extrabold"
+      className="bg-black text-white shadow-lg font-figtree font-extrabold relative z-50"
       aria-label="Main navigation"
       role="navigation"
     >
       <div className="container mx-auto px-4">
         <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
-          <Link to="/" className="text-xl font-bold md:text-2xl" aria-label="Patriot Radar Home">
+          <Link to="/" className="text-xl font-bold md:text-2xl" aria-label="Patriot Radar Home" tabIndex={0}>
             Patriot Radar
           </Link>
           <div className="flex flex-wrap items-center gap-3 md:gap-6">
             <Link 
               to="/" 
-              className="text-sm hover:text-gray-300 transition md:text-base focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:rounded px-1"
+              className="text-sm hover:text-gray-300 transition md:text-base px-1"
               aria-label="Home"
+              tabIndex={0}
             >
               Home
             </Link>
             <Link 
               to="/map" 
-              className="text-sm hover:text-gray-300 transition md:text-base focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:rounded px-1"
+              className="text-sm hover:text-gray-300 transition md:text-base px-1"
               aria-label="Report an incident"
+              tabIndex={0}
             >
               Report Incident
             </Link>
             <Link 
               to="/reports" 
-              className="text-sm hover:text-gray-300 transition md:text-base focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:rounded px-1"
+              className="text-sm hover:text-gray-300 transition md:text-base px-1"
               aria-label="View all reports"
+              tabIndex={0}
             >
               View Reports
             </Link>
@@ -87,16 +90,18 @@ function Navigation() {
                     {currentUser.account_type === 'admin' && (
                       <a 
                         href="/admin" 
-                        className="text-xs hover:text-gray-300 transition md:text-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 focus-visible:rounded px-1"
+                        className="text-xs hover:text-gray-300 transition md:text-sm px-1"
                         aria-label="Admin panel"
+                        tabIndex={0}
                       >
                         Admin
                       </a>
                     )}
                     <button
                       onClick={handleLogout}
-                      className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition text-xs md:text-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                      className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition text-xs md:text-sm"
                       aria-label="Log out from your account"
+                      tabIndex={0}
                     >
                       Logout
                     </button>
@@ -104,8 +109,9 @@ function Navigation() {
                 ) : (
                   <Link 
                     to="/login" 
-                    className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition text-xs md:text-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                    className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition text-xs md:text-sm"
                     aria-label="Log in to your account"
+                    tabIndex={0}
                   >
                     Login
                   </Link>

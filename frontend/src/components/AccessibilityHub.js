@@ -158,14 +158,14 @@ function AccessibilityHub() {
                   className="w-4 h-4 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
                   aria-label="Toggle high contrast mode"
                 />
-                <span className="text-sm text-gray-700">High Contrast</span>
-                <span className="text-xs text-gray-500 ml-auto">Alt+1</span>
+                <span className="text-sm text-gray-900">High Contrast</span>
+                <span className="text-xs text-gray-700 ml-auto">Alt+1</span>
               </label>
             </div>
 
             {/* Font Size Controls */}
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
                 Text Size: {fontSize}%
               </label>
               <div className="flex gap-2">
@@ -175,7 +175,7 @@ function AccessibilityHub() {
                     announceToScreenReader(`Font size decreased to ${Math.max(fontSize - 10, 80)}%`);
                   }}
                   disabled={fontSize <= 80}
-                  className="flex-1 px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-semibold transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded text-sm font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
                   aria-label="Decrease text size by 10 percent. Shortcut Alt+3"
                   title="Alt+3: Decrease font size"
                 >
@@ -183,7 +183,7 @@ function AccessibilityHub() {
                 </button>
                 <button
                   onClick={() => setFontSize(100)}
-                  className="flex-1 px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
                   aria-label="Reset text size to default 100%"
                 >
                   Reset
@@ -194,7 +194,7 @@ function AccessibilityHub() {
                     announceToScreenReader(`Font size increased to ${Math.min(fontSize + 10, 200)}%`);
                   }}
                   disabled={fontSize >= 200}
-                  className="flex-1 px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-semibold transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded text-sm font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
                   aria-label="Increase text size by 10 percent. Shortcut Alt+2"
                   title="Alt+2: Increase font size"
                 >
@@ -206,14 +206,14 @@ function AccessibilityHub() {
             {/* Keyboard Shortcuts Reference */}
             <div className="border-t pt-4 mt-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-2">Keyboard Shortcuts</h3>
-              <ul className="text-xs text-gray-600 space-y-1">
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Alt+A</kbd> Toggle this panel</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Alt+1</kbd> High contrast</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Alt+2</kbd> Larger text</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Alt+3</kbd> Smaller text</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Alt+4</kbd> Reset all</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Tab</kbd> Navigate page</li>
-                <li><kbd className="bg-gray-100 px-2 py-1 rounded">Enter/Space</kbd> Activate buttons</li>
+              <ul className="text-xs text-gray-800 space-y-1">
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Alt+A</kbd> Toggle this panel</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Alt+1</kbd> High contrast</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Alt+2</kbd> Larger text</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Alt+3</kbd> Smaller text</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Alt+4</kbd> Reset all</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Tab</kbd> Navigate page</li>
+                <li><kbd className="bg-gray-300 text-gray-900 px-2 py-1 rounded font-semibold">Enter/Space</kbd> Activate buttons</li>
               </ul>
             </div>
 
@@ -246,9 +246,10 @@ function AccessibilityHub() {
             {/* Close Button for Touch Devices */}
             <button
               onClick={() => setIsOpen(false)}
-              className="w-full mt-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm font-semibold transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+              className="w-full mt-4 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-semibold text-white transition focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400"
+              aria-label="Close accessibility panel. Keyboard shortcut Alt+A"
             >
-              Close
+              Close (Alt+A)
             </button>
           </div>
         )}
