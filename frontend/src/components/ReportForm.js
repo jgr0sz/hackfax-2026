@@ -8,18 +8,24 @@ function ReportForm({ selectedLocation }) {
     details: '',
     quick_issue: ''
   });
+  const [includeLocation, setIncludeLocation] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
 
   // Update location field when map selection changes
   useEffect(() => {
-    if (selectedLocation) {
+    if (includeLocation && selectedLocation) {
       setFormData(prev => ({
         ...prev,
         location: `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`
       }));
+    } else if (includeLocation) {
+      setFormData(prev => ({
+        ...prev,
+        location: ''
+      }));
     }
-  }, [selectedLocation]);
+  }, [includeLocation, selectedLocation]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,6 +40,12 @@ function ReportForm({ selectedLocation }) {
     setSubmitting(true);
     setSubmitStatus(null);
 
+    if (includeLocation && !selectedLocation) {
+      setSubmitStatus({ type: 'error', message: 'Select a location on the map or uncheck "Include location".' });
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch('/report', {
         method: 'POST',
@@ -42,7 +54,7 @@ function ReportForm({ selectedLocation }) {
         },
         body: JSON.stringify({
           ...formData,
-          coordinates: selectedLocation
+          coordinates: includeLocation ? selectedLocation : null
         })
       });
 
@@ -55,7 +67,7 @@ function ReportForm({ selectedLocation }) {
       setFormData({
         date: new Date().toISOString().split('T')[0],
         severity: 'low',
-        location: formData.location,
+        location: includeLocation ? formData.location : '',
         details: '',
         quick_issue: ''
       });
@@ -67,11 +79,11 @@ function ReportForm({ selectedLocation }) {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Report Incident</h2>
+    <div className="mx-auto w-full max-w-2xl p-4 sm:p-6">
+      <h2 className="text-xl font-bold mb-6 sm:text-2xl">Report Incident</h2>
       
       {submitStatus && (
-        <div className={`mb-4 p-4 rounded-lg ${
+        <div className={`mb-4 p-4 rounded-lg text-sm sm:text-base ${
           submitStatus.type === 'success' 
             ? 'bg-green-50 text-green-800 border border-green-200' 
             : 'bg-red-50 text-red-800 border border-red-200'
@@ -91,7 +103,7 @@ function ReportForm({ selectedLocation }) {
             value={formData.quick_issue}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Select incident type</option>
             <option value="Theft">Theft</option>
@@ -116,7 +128,7 @@ function ReportForm({ selectedLocation }) {
             value={formData.date}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
@@ -135,7 +147,7 @@ function ReportForm({ selectedLocation }) {
                 onChange={handleChange}
                 className="mr-2"
               />
-              <span className="text-sm">Low - Minor incident, no immediate action needed</span>
+              <span className="text-xs sm:text-sm">Low - Minor incident, no immediate action needed</span>
             </label>
             <label className="flex items-center">
               <input
@@ -146,7 +158,7 @@ function ReportForm({ selectedLocation }) {
                 onChange={handleChange}
                 className="mr-2"
               />
-              <span className="text-sm">Medium - Requires attention</span>
+              <span className="text-xs sm:text-sm">Medium - Requires attention</span>
             </label>
             <label className="flex items-center">
               <input
@@ -157,15 +169,29 @@ function ReportForm({ selectedLocation }) {
                 onChange={handleChange}
                 className="mr-2"
               />
-              <span className="text-sm">High - Urgent, immediate action required</span>
+              <span className="text-xs sm:text-sm">High - Urgent, immediate action required</span>
             </label>
           </div>
         </div>
 
-        {/* Location (read-only, set by map) */}
+        {/* Location (optional) */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Location (click on map to set)
+            Location (optional)
+          </label>
+          <label className="flex items-center gap-2 text-xs text-gray-600 mb-2 sm:text-sm">
+            <input
+              type="checkbox"
+              checked={includeLocation}
+              onChange={(e) => {
+                const nextValue = e.target.checked;
+                setIncludeLocation(nextValue);
+                if (!nextValue) {
+                  setFormData(prev => ({ ...prev, location: '' }));
+                }
+              }}
+            />
+            Include location from map
           </label>
           <input
             type="text"
@@ -173,7 +199,7 @@ function ReportForm({ selectedLocation }) {
             value={formData.location}
             readOnly
             placeholder="Click on the map to select location"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700"
           />
         </div>
 
@@ -189,16 +215,16 @@ function ReportForm({ selectedLocation }) {
             required
             rows="4"
             placeholder="Describe what happened in detail..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={submitting || !selectedLocation}
+          disabled={submitting}
           className={`w-full py-3 rounded-lg font-semibold text-white transition ${
-            submitting || !selectedLocation
+            submitting
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
           }`}

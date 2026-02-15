@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import gmuLogo from '../assets/patriot-radar-logo.png';
 
 function HomePage() {
   const [feedItems, setFeedItems] = useState([]);
   const [feedStatus, setFeedStatus] = useState({ loading: true, message: '' });
   const [userCoords, setUserCoords] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -14,6 +16,8 @@ function HomePage() {
       setCurrentUser(data.user || null);
     } catch (err) {
       setCurrentUser(null);
+    } finally {
+      setUserLoading(false);
     }
   }, []);
 
@@ -54,10 +58,15 @@ function HomePage() {
     // Check if the response is JSON
     const contentType = res.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Unexpected response format');
+      throw new Error('Unable to load feed. Please try again later.');
     }
 
-    if (!res.ok) throw new Error('Could not load feed.');
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      throw new Error('Unable to load feed. Please try refreshing the page.');
+    }
     const data = await res.json();
     const feed = data.feed || [];
     setFeedItems(feed);
@@ -67,7 +76,10 @@ function HomePage() {
     });
   } catch (err) {
     setFeedItems([]);
-    setFeedStatus({ loading: false, message: err.message || 'Error loading feed.' });
+    setFeedStatus({ 
+      loading: false, 
+      message: err.message || 'An unexpected error occurred. Please try again later.' 
+    });
   }
 }, []);
 
@@ -157,49 +169,47 @@ function HomePage() {
       <div className="pointer-events-none absolute right-10 top-20 h-72 w-72 rounded-full bg-emerald-900/10 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(20,20,20,0.08),transparent_55%)]" />
 
-      <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-12">
+      <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-12">
         <header className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-24 items-center justify-center rounded-md border border-black/10 bg-white/70 text-xs font-semibold uppercase tracking-wide">
-              GMU Logo
+            <div className="flex h-16 w-28 items-center justify-center sm:h-20 sm:w-36">
+              <img
+                src={gmuLogo}
+                alt="Patriot Radar logo"
+                className="h-full w-auto object-contain"
+              />
             </div>
-            <div>
+            <div className="text-center sm:text-left">
               <p className="text-xs uppercase tracking-[0.25em] text-black/60">Patriot Radar</p>
-              <h1 className="text-3xl font-semibold md:text-4xl">Campus Safety Reporting</h1>
+              <h1 className="text-2xl font-semibold sm:text-3xl md:text-4xl">Campus Safety Reporting</h1>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="rounded-full border border-black/15 bg-white/80 px-4 py-2 text-sm font-semibold text-black/80 shadow-sm transition hover:bg-white"
-            >
-              Login
-            </Link>
           </div>
         </header>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-[320px_1fr]">
+        <div className="mt-8 grid gap-6 lg:mt-12 lg:grid-cols-[320px_1fr]">
           <section className="rounded-2xl border border-black/10 bg-white/80 p-5 shadow-sm">
             <div className="mb-4 inline-flex rounded-full bg-black/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-black/70">
               Live Report Feed
             </div>
-                        {/* Login Required Message */}
-            {!currentUser && (
-              <div className="container mx-auto px-4 py-12">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
-                  You must be logged in to view reports.{' '}
-                  <Link to="/login" className="font-semibold underline">
-                    Login to view
-                  </Link>
-                </div>
+            
+            {/* Display based on auth and loading state */}
+            {!userLoading && !currentUser && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
+                You must be logged in to view reports.{' '}
+                <Link to="/login" className="font-semibold underline">
+                  Login to view
+                </Link>
               </div>
             )}
 
-            {feedStatus.loading && (
+            {!userLoading && currentUser && feedStatus.loading && (
               <div className="text-sm text-black/60">Loading feed...</div>
             )}
-            {!feedStatus.loading && feedStatus.message && (
-              <div className="text-sm text-black/60">{feedStatus.message}</div>
+            
+            {!userLoading && currentUser && !feedStatus.loading && feedStatus.message && (
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
+                {feedStatus.message}
+              </div>
             )}
             <div className="space-y-4">
               {feedItems.map(({ report, distance_miles }) => {
@@ -287,11 +297,11 @@ function HomePage() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,84,63,0.2),transparent_50%)]" />
               <div className="relative grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
                 <div className="space-y-3">
-                  <h2 className="text-2xl font-semibold">Fast incident response</h2>
-                  <p className="text-sm text-black/65">
+                  <h2 className="text-xl font-semibold sm:text-2xl">Fast incident response</h2>
+                  <p className="text-sm text-black/65 sm:text-base">
                     Pinpoint a location, submit details, and keep the community informed in real time.
                   </p>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <Link
                       to="/map"
                       className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white"

@@ -140,12 +140,12 @@ function MapComponent({ onLocationSelect }) {
       {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-          <div className="text-lg font-semibold text-gray-700">Loading map...</div>
+          <div className="text-base font-semibold text-gray-700 md:text-lg">Loading map...</div>
         </div>
       )}
       
       {/* Map instructions */}
-      <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 rounded-lg shadow-lg p-4 max-w-xs">
+      <div className="absolute bottom-4 left-4 right-4 bg-white bg-opacity-90 rounded-lg shadow-lg p-3 max-w-xs md:left-4 md:right-auto md:p-4">
         <h3 className="font-semibold text-sm mb-2">Map Instructions</h3>
         <ul className="text-xs text-gray-700 space-y-1">
           <li>🔵 <strong>Blue marker:</strong> Your current location</li>

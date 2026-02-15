@@ -65,47 +65,54 @@ function ReportsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Incident Reports</h1>
+    <div className="container mx-auto px-4 py-6 md:py-8">
+      <h1 className="text-2xl font-bold mb-6 md:text-3xl">Incident Reports</h1>
       
       {reports.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-8 text-center">
           <p className="text-gray-600 text-lg">No reports yet</p>
         </div>
       ) : (
-        <div className="grid gap-6">
-          {reports.map((report, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {report.quick_issue || 'Incident Report'}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {new Date(report.date).toLocaleDateString()} at {report.location}
-                  </p>
+        <div className="grid gap-4 md:gap-6">
+          {reports.map((report) => {
+            const loc = report.location || {};
+            const locationText = report.address ||
+              (loc.latitude != null && loc.longitude != null
+                ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
+                : '—');
+            return (
+              <div key={report.id} className="bg-white rounded-lg shadow-md p-5 md:p-6 hover:shadow-lg transition">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 md:text-xl">
+                      Incident Report
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {new Date(report.date).toLocaleDateString()} · {locationText}
+                    </p>
+                  </div>
+                  <span className={`w-fit px-3 py-1 rounded-full text-xs font-semibold md:text-sm ${
+                    report.severity === 'high' ? 'bg-red-100 text-red-800' :
+                    report.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {report.severity || 'Unknown'} severity
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  report.severity === 'high' ? 'bg-red-100 text-red-800' :
-                  report.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {report.severity || 'Unknown'} severity
-                </span>
+                
+                <p className="text-gray-700 mb-4 text-sm md:text-base">{report.details || report.description}</p>
+                
+                <div className="flex flex-wrap gap-2 text-xs md:text-sm">
+                  <span className={`px-2 py-1 rounded ${
+                    report.status === 'Resolved' ? 'bg-green-50 text-green-700' :
+                    'bg-orange-50 text-orange-700'
+                  }`}>
+                    {report.status || 'Pending'}
+                  </span>
+                </div>
               </div>
-              
-              <p className="text-gray-700 mb-4">{report.details || report.description}</p>
-              
-              <div className="flex gap-3 text-sm">
-                <span className={`px-2 py-1 rounded ${
-                  report.status === 'Resolved' ? 'bg-green-50 text-green-700' :
-                  'bg-orange-50 text-orange-700'
-                }`}>
-                  {report.status || 'Pending'}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
