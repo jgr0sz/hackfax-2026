@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'dotenv/config';
+
 
 function MapComponent({ onLocationSelect }) {
   const mapContainer = useRef(null);
@@ -14,8 +14,9 @@ function MapComponent({ onLocationSelect }) {
   const [loading, setLoading] = useState(true);
 
   // Amazon Location Service config
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.REACT_APP_API_KEY;
   const region = "us-east-1";
+  const isApiKeyMissing = !apiKey;
 
   // Get user's current position
   const getCurrentPositionAsync = (options) => {
@@ -59,6 +60,11 @@ function MapComponent({ onLocationSelect }) {
         setCenterLngLat(initialCenter);
       } catch (e) {
         console.warn("Geolocation failed, using fallback:", e.message);
+      }
+
+      if (!apiKey) {
+        setLoading(false);
+        return;
       }
 
       // Create map
@@ -116,21 +122,30 @@ function MapComponent({ onLocationSelect }) {
         map.current.remove();
       }
     };
-  }, [onLocationSelect]);
+  }, [apiKey, onLocationSelect]);
 
   return (
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="h-full w-full" />
       
+      {isApiKeyMissing && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-20">
+          <div className="max-w-md text-center text-sm text-gray-700">
+            <p className="font-semibold">Missing API key</p>
+            <p>Add REACT_APP_API_KEY to frontend/.env and restart the dev server.</p>
+          </div>
+        </div>
+      )}
+
       {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-          <div className="text-lg font-semibold text-gray-700">Loading map...</div>
+          <div className="text-base font-semibold text-gray-700 md:text-lg">Loading map...</div>
         </div>
       )}
       
       {/* Map instructions */}
-      <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 rounded-lg shadow-lg p-4 max-w-xs">
+      <div className="absolute bottom-4 left-4 right-4 bg-white bg-opacity-90 rounded-lg shadow-lg p-3 max-w-xs md:left-4 md:right-auto md:p-4">
         <h3 className="font-semibold text-sm mb-2">Map Instructions</h3>
         <ul className="text-xs text-gray-700 space-y-1">
           <li>🔵 <strong>Blue marker:</strong> Your current location</li>
