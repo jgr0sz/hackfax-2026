@@ -1,3 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+	--surface: #e4e4e2;
+	--ink: #1c1c1c;
+	--accent: #0f4f3e;
+	--accent-dark: #0b3e31;
+}
+
+body {
+	font-family: 'Space Grotesk', 'Archivo', sans-serif;
+	background: var(--surface);
+	color: var(--ink);
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 function ReportsPage() {
   const [reports, setReports] = useState([]);
@@ -11,8 +12,17 @@ function ReportsPage() {
 
   const fetchReports = async () => {
     try {
-      const response = await fetch('/reports');
-      if (!response.ok) throw new Error('Failed to fetch reports');
+      const response = await fetch('/reports', { credentials: 'same-origin' });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('LOGIN_REQUIRED');
+        }
+        throw new Error('Failed to fetch reports');
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('LOGIN_REQUIRED');
+      }
       const data = await response.json();
       setReports(data);
       setLoading(false);
@@ -33,6 +43,18 @@ function ReportsPage() {
   }
 
   if (error) {
+    if (error === 'LOGIN_REQUIRED') {
+      return (
+        <div className="container mx-auto px-4 py-12">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+            You must be logged in to view reports.{' '}
+            <Link to="/login" className="font-semibold underline">
+              Login to view
+            </Link>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">

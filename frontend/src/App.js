@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import ReportsPage from './pages/ReportsPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
 function App() {
   return (
@@ -25,6 +27,9 @@ function App() {
                 <Link to="/reports" className="hover:text-gray-300 transition">
                   View Reports
                 </Link>
+                <Link to="/login" className="hover:text-gray-300 transition">
+                  Login
+                </Link>
               </div>
             </div>
           </div>
@@ -35,6 +40,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<SignupPage />} />
         </Routes>
       </div>
     </Router>
