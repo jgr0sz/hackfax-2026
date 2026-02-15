@@ -20,11 +20,6 @@
         z-index: 10;
         font-family: system-ui, sans-serif;
         width: 340px;
-        max-height: calc(100vh - 28px);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
       }
       .panel {
         background: rgba(255, 255, 255, 0.95);
@@ -32,27 +27,6 @@
         padding: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.12);
       }
-      .feed-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-      .feed-panel h3 { margin: 0 0 8px; font-size: 14px; }
-      .feed-list { overflow-y: auto; max-height: 280px; }
-      .feed-item {
-        padding: 10px;
-        margin-bottom: 8px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #6c757d;
-        font-size: 12px;
-      }
-      .feed-item.verified { border-left-color: #28a745; }
-      .feed-item .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; }
-      .feed-item .badge.verified-badge { background: #28a745; color: white; }
-      .feed-item .badge.unverified-badge { background: #6c757d; color: white; }
-      .feed-item .vote-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-      .feed-item .vote-row button { width: auto; padding: 4px 8px; font-size: 12px; }
-      .feed-item .vote-score { font-weight: bold; min-width: 24px; }
-      .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-      .header-row .user-info { font-size: 12px; color: #555; }
-      .header-row button { width: auto; padding: 6px 12px; font-size: 12px; }
       .row { display: flex; gap: 8px; }
       button, input, select, textarea {
         width: 100%;
@@ -84,13 +58,6 @@
     <!-- Overlay controls (map stays visible) -->
     <div class="ui">
       <div class="panel">
-        <div class="header-row">
-          <span class="user-info" id="userInfo">—</span>
-          <span>
-            <a href="/admin" id="adminLink" style="display:none; margin-right:8px; font-size:12px;">Admin</a>
-            <button id="logoutBtn" type="button">Logout</button>
-          </span>
-        </div>
         <div class="row">
           <button id="reportBtn" type="button">Report incident (auto locate)</button>
           <button id="manualBtn" type="button">Manual</button>
@@ -99,8 +66,6 @@
         <div id="form">
           <label>Date</label>
           <input type="date" id="date" required />
-          <label>Time</label>
-          <input type="time" id="time" />
 
           <label>Severity</label>
           <select id="severity" required>
@@ -122,10 +87,6 @@
 
         <div id="status">Ready.</div>
       </div>
-      <div class="panel feed-panel">
-        <h3>Feed (within 0.5 mi)</h3>
-        <div id="feedList" class="feed-list">Loading…</div>
-      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.min.js"></script>
@@ -134,7 +95,6 @@
       let marker = null;
       let coords = null; // { latitude, longitude, accuracyMeters } or null
       let userLocationMarker = null; // persistent user location indicator
-      let reportMarkers = []; // pins for reports on the map
 
       const statusEl = document.querySelector("#status");
       const formEl = document.querySelector("#form");
@@ -145,94 +105,10 @@
       const cancelBtn = document.querySelector("#cancelBtn");
 
       const dateEl = document.querySelector("#date");
-      const timeEl = document.querySelector("#time");
       const severityEl = document.querySelector("#severity");
       const detailsEl = document.querySelector("#details");
-      const feedListEl = document.querySelector("#feedList");
-      const userInfoEl = document.querySelector("#userInfo");
-      const logoutBtn = document.querySelector("#logoutBtn");
-
-      let currentUser = null;
 
       function setStatus(msg) { statusEl.textContent = msg; }
-
-      function escapeHtml(s) {
-        if (s == null || s === "") return "";
-        const div = document.createElement("div");
-        div.textContent = s;
-        return div.innerHTML;
-      }
-      function reportPopupHtml(report) {
-        const sev = (report.severity || "—").toLowerCase();
-        const dateTimeStr = formatReportDateTime(report.date, report.created_at);
-        const details = escapeHtml((report.details || "—").slice(0, 200));
-        const address = escapeHtml(report.address || "—");
-        const verified = report.verified ? '<span style="color:#28a745;">✓ Verified</span>' : '<span style="color:#6c757d;">Unverified</span>';
-        return `<div style="min-width:200px;max-width:280px;font-size:13px;">
-          <div style="font-weight:bold;margin-bottom:6px;">${sev} ${verified}</div>
-          <div style="color:#666;margin-bottom:4px;">🕐 ${escapeHtml(dateTimeStr)}</div>
-          <div style="color:#555;margin-bottom:4px;">📍 ${address}</div>
-          <div style="margin-top:6px;">${details}</div>
-        </div>`;
-      }
-      function clearReportMarkers() {
-        reportMarkers.forEach(m => m.remove());
-        reportMarkers = [];
-      }
-      function updateReportMarkers(reports) {
-        if (!map) return;
-        clearReportMarkers();
-        (reports || []).forEach(report => {
-          const loc = report.location;
-          if (!loc || loc.latitude == null || loc.longitude == null) return;
-          const m = new maplibregl.Marker({ color: "#e74c3c" })
-            .setLngLat([loc.longitude, loc.latitude])
-            .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(reportPopupHtml(report)))
-            .addTo(map);
-          reportMarkers.push(m);
-        });
-      }
-      async function refreshReportMarkers() {
-        try {
-          const res = await fetch("/reports", { credentials: "same-origin" });
-          if (res.ok) {
-            const reports = await res.json();
-            updateReportMarkers(reports);
-          }
-        } catch (e) {}
-      }
-
-      function formatReportDateTime(dateStr, createdStr) {
-        if (!dateStr && !createdStr) return "—";
-        let s = "";
-        if (dateStr) {
-          const d = dateStr.indexOf("T") >= 0 ? new Date(dateStr + (dateStr.length === 16 ? ":00" : "")) : new Date(dateStr + "T12:00:00");
-          if (!isNaN(d.getTime())) {
-            s = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-            if (dateStr.indexOf("T") >= 0) s += ", " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-          } else s = dateStr;
-        }
-        if (createdStr) {
-          const c = new Date(createdStr);
-          if (!isNaN(c.getTime())) s += (s ? " · " : "") + "Reported " + c.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " at " + c.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-        }
-        return s || dateStr || createdStr || "—";
-      }
-
-      async function loadUser() {
-        try {
-          const res = await fetch("/api/me", { credentials: "same-origin" });
-          const data = await res.json();
-          currentUser = data.user || null;
-          if (userInfoEl) userInfoEl.textContent = currentUser ? currentUser.username + (currentUser.account_type === "admin" ? " (admin)" : "") : "—";
-      const adminLink = document.getElementById("adminLink");
-      if (adminLink) adminLink.style.display = currentUser && currentUser.account_type === "admin" ? "inline" : "none";
-        } catch (e) { userInfoEl.textContent = "—"; }
-      }
-      logoutBtn.addEventListener("click", async () => {
-        await fetch("/logout", { method: "POST", credentials: "same-origin" });
-        window.location.href = "/login";
-      });
 
       // Notification permission handling
       function requestNotificationPermission() {
@@ -289,6 +165,26 @@
           // Refocus the window after a short delay
           setTimeout(() => window.focus(), 100);
           
+          // Also show a visual banner as fallback
+          const banner = document.createElement("div");
+          banner.textContent = "✅ Notifications enabled!";
+          banner.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 9999;
+            font-weight: bold;
+          `;
+          document.body.appendChild(banner);
+          
+          setTimeout(() => banner.remove(), 3000);
+          
         } catch (err) {
           console.error("Error showing notification:", err);
         }
@@ -296,11 +192,7 @@
 
       function openForm() {
         formEl.style.display = "block";
-        const now = new Date();
-        dateEl.valueAsDate = now;
-        if (timeEl) {
-          timeEl.value = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
-        }
+        dateEl.valueAsDate = new Date();
         detailsEl.focus();
       }
 
@@ -308,7 +200,6 @@
         formEl.style.display = "none";
         severityEl.value = "";
         detailsEl.value = "";
-        if (timeEl) timeEl.value = "";
       }
 
       function setMarker(lat, lng) {
@@ -470,10 +361,7 @@
         closeForm();
       });
 
-      // Track which report IDs we've already notified (show each report only once)
-      const notifiedReportIds = new Set();
-
-      // Alert for nearby reports — only show a notification once per report
+      // Alert for nearby reports
       async function checkNearbyReports() {
         if (!coords || !coords.latitude || !coords.longitude) return;
         
@@ -481,7 +369,6 @@
           const res = await fetch("/reports/nearby", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
             body: JSON.stringify({
               latitude: coords.latitude,
               longitude: coords.longitude,
@@ -494,17 +381,20 @@
           const data = await res.json();
           const nearby = data.nearby_reports || [];
           
-          for (const item of nearby) {
-            const report = item.report;
-            const reportId = report && report.id;
-            if (reportId != null && notifiedReportIds.has(reportId)) continue;
-            if (reportId != null) notifiedReportIds.add(reportId);
-
-            const distance = item.distance_miles;
-            const severity = (report.severity != null && String(report.severity).trim() !== "")
-              ? String(report.severity).toLowerCase()
-              : "unknown";
+          if (nearby.length > 0) {
+            const report = nearby[0].report;
+            const distance = nearby[0].distance_miles;
             
+            console.log("API RESPONSE entire nearby[0]:", JSON.stringify(nearby[0], null, 2));
+            console.log("API RESPONSE report object:", report);
+            console.log("API RESPONSE report.severity:", report.severity);
+            console.log("API RESPONSE report.severity type:", typeof report.severity);
+            
+            const severity = report.severity || "unknown";
+            
+            console.log("API RESPONSE - Found report with severity:", severity);
+            
+            // Get emoji for severity
             let severityEmoji = "⚠️";
             if (severity === "low") severityEmoji = "🟡";
             else if (severity === "medium") severityEmoji = "🟠";
@@ -513,10 +403,9 @@
             
             showAlertNotification(
               `${severityEmoji} ${severity.toUpperCase()} - ${distance.toFixed(2)} miles away`,
-              `${report.details || ""}`,
+              `${report.details}`,
               report
             );
-            break; // show one notification per check
           }
         } catch (err) {
           console.error("Error checking nearby reports:", err);
@@ -524,31 +413,83 @@
       }
 
       function showAlertNotification(title, body, report) {
-        const severity = (report && report.severity != null && String(report.severity).trim() !== "")
-          ? String(report.severity).toLowerCase()
-          : "unknown";
+        // Determine colors based on severity level (already lowercase from form)
+        const severity = (report.severity || "medium");
+        let alertColor = "#ff4757"; // Default red for high
+        let shadowColor = "rgba(255, 71, 87, 0.4)";
+        
+        if (severity === "low") {
+          alertColor = "#ffa502";
+          shadowColor = "rgba(255, 165, 2, 0.4)";
+        } else if (severity === "medium") {
+          alertColor = "#ff6348";
+          shadowColor = "rgba(255, 99, 72, 0.4)";
+        } else if (severity === "high") {
+          alertColor = "#ff4757";
+          shadowColor = "rgba(255, 71, 87, 0.4)";
+        } else if (severity === "critical") {
+          alertColor = "#c23030";
+          shadowColor = "rgba(194, 48, 48, 0.4)";
+        }
+        
+        // Show visual alert banner
+        const alert = document.createElement("div");
+        alert.style.cssText = `
+          position: fixed;
+          top: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, ${alertColor} 0%, ${alertColor} 100%);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px ${shadowColor};
+          z-index: 9998;
+          max-width: 400px;
+          font-weight: bold;
+          cursor: pointer;
+          animation: slideDown 0.3s ease-out;
+        `;
+        alert.innerHTML = `<div style="font-size: 16px; margin-bottom: 8px;">${title}</div><div style="font-size: 13px; opacity: 0.9;">${body}</div>`;
+        
+        alert.addEventListener("click", () => {
+          if (report.location && report.location.longitude) {
+            map.flyTo({ 
+              center: [report.location.longitude, report.location.latitude], 
+              zoom: 16 
+            });
+          }
+          alert.remove();
+        });
+        
+        document.body.appendChild(alert);
+        
+        // Auto-remove after 6 seconds
+        setTimeout(() => alert.remove(), 6000);
+        
+        // Also show browser notification
         if (Notification.permission === "granted") {
           new Notification(title, { body: body });
         }
-        if (severity === "high" || severity === "critical") {
-          try {
-            const alarm = new Audio("/static/audio/alarm.mp3");
-            alarm.volume = 0.7;
-            alarm.play().catch(() => {});
-          } catch (e) {}
-        }
       }
+      
+      // Add CSS animation
+      const style = document.createElement("style");
+      style.textContent = `
+        @keyframes slideDown {
+          from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
 
       submitBtn.addEventListener("click", async () => {
         if (!dateEl.value) return setStatus("Pick a date.");
         if (!severityEl.value) return setStatus("Pick a severity.");
         if (!detailsEl.value.trim()) return setStatus("Enter details.");
 
-        let reportDate = dateEl.value;
-        if (timeEl && timeEl.value) reportDate = dateEl.value + "T" + timeEl.value;
-
         const payload = {
-          date: reportDate,
+          date: dateEl.value,
           severity: severityEl.value,
           location: coords ?? { latitude: null, longitude: null, accuracyMeters: null },
           details: detailsEl.value.trim(),
@@ -561,7 +502,6 @@
           const res = await fetch("/report", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
             body: JSON.stringify(payload),
           });
 
@@ -571,120 +511,22 @@
           setStatus("Submitted ✅ (report saved)");
           closeForm();
           
+          // Check for other nearby reports before clearing coords
           checkNearbyReports();
-          fetchFeed();
-          refreshReportMarkers();
+          
+          coords = null;
         } catch (err) {
           setStatus("Submit failed ❌\n" + err.message);
         }
       });
 
-      // Feed: fetch within 0.5 mi, show verified/unverified, voting; poll every 30s
-      async function fetchFeed() {
-        if (!coords || !coords.latitude || !coords.longitude) {
-          feedListEl.textContent = "Enable location to see feed.";
-          return;
-        }
-        try {
-          const res = await fetch("/feed", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({
-              latitude: coords.latitude,
-              longitude: coords.longitude
-            })
-          });
-          if (!res.ok) { feedListEl.textContent = "Could not load feed."; return; }
-          const data = await res.json();
-          const feed = data.feed || [];
-          if (feed.length === 0) {
-            feedListEl.innerHTML = "<div style='padding:8px;color:#666;'>No events within 0.5 miles.</div>";
-            return;
-          }
-          feedListEl.innerHTML = feed.map(({ report, distance_miles }) => {
-            const sev = (report.severity || "").toLowerCase();
-            const badgeClass = report.verified ? "verified-badge" : "unverified-badge";
-            const badgeText = report.verified ? "Verified" : "Unverified";
-            const itemClass = "feed-item" + (report.verified ? " verified" : "");
-            const upCount = report.upvote_count != null ? report.upvote_count : 0;
-            const downCount = report.downvote_count != null ? report.downvote_count : 0;
-            const userVote = report.user_vote != null ? report.user_vote : null;
-            const upActive = userVote === 1 ? " style='background:#28a745;color:white;'" : "";
-            const downActive = userVote === -1 ? " style='background:#dc3545;color:white;'" : "";
-            let verifyBtn = "";
-            let deleteBtn = "";
-            if (currentUser && currentUser.account_type === "admin") {
-              if (!report.verified) verifyBtn = `<button type="button" class="verify-btn" data-id="${report.id}">Verify</button>`;
-              deleteBtn = `<button type="button" class="delete-feed-btn" data-id="${report.id}" style="margin-left:auto;color:#dc3545;border-color:#dc3545;">Delete</button>`;
-            }
-            const fullAddr = report.address || "";
-            const addr = fullAddr ? `<div style="margin-top:2px;font-size:11px;color:#555;" title="${fullAddr.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}">📍 ${fullAddr.slice(0, 50)}${fullAddr.length > 50 ? "…" : ""}</div>` : "";
-            const dateTimeStr = formatReportDateTime(report.date, report.created_at);
-            return `<div class="${itemClass}" data-id="${report.id}">
-              <span class="badge ${badgeClass}">${badgeText}</span>
-              <strong>${sev}</strong> · ${distance_miles} mi
-              <div style="margin-top:2px;font-size:11px;color:#666;">🕐 ${dateTimeStr}</div>
-              ${addr}
-              <div style="margin-top:4px;">${(report.details || "").slice(0, 80)}${(report.details || "").length > 80 ? "…" : ""}</div>
-              <div class="vote-row">
-                <button type="button" class="vote-up" data-id="${report.id}"${upActive}>↑ ${upCount}</button>
-                <button type="button" class="vote-down" data-id="${report.id}"${downActive}>↓ ${downCount}</button>
-                ${verifyBtn}
-                ${deleteBtn}
-              </div>
-            </div>`;
-          }).join("");
-          feedListEl.querySelectorAll(".vote-up").forEach(btn => {
-            btn.addEventListener("click", () => voteReport(parseInt(btn.dataset.id, 10), 1));
-          });
-          feedListEl.querySelectorAll(".vote-down").forEach(btn => {
-            btn.addEventListener("click", () => voteReport(parseInt(btn.dataset.id, 10), -1));
-          });
-          feedListEl.querySelectorAll(".verify-btn").forEach(btn => {
-            btn.addEventListener("click", () => verifyReport(parseInt(btn.dataset.id, 10)));
-          });
-          feedListEl.querySelectorAll(".delete-feed-btn").forEach(btn => {
-            btn.addEventListener("click", () => deleteReport(parseInt(btn.dataset.id, 10)));
-          });
-        } catch (err) {
-          feedListEl.textContent = "Error loading feed.";
-        }
-      }
-      async function voteReport(reportId, vote) {
-        try {
-          const res = await fetch(`/reports/${reportId}/vote`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ vote })
-          });
-          if (res.ok) fetchFeed();
-        } catch (e) {}
-      }
-      async function verifyReport(reportId) {
-        try {
-          const res = await fetch(`/reports/${reportId}/verify`, { method: "POST", credentials: "same-origin" });
-          if (res.ok) fetchFeed();
-        } catch (e) {}
-      }
-      async function deleteReport(reportId) {
-        if (!confirm("Delete this report?")) return;
-        try {
-          const res = await fetch(`/reports/${reportId}`, { method: "DELETE", credentials: "same-origin" });
-          if (res.ok) { fetchFeed(); refreshReportMarkers(); }
-        } catch (e) {}
-      }
-
       // Initialize map and request notifications
-      initializeMap().then(async () => {
-        await loadUser();
+      initializeMap().then(() => {
+        // Request notification permission after map loads
         setTimeout(() => requestNotificationPermission(), 500);
-        checkNearbyReports();
-        fetchFeed();
-        refreshReportMarkers();
-        setInterval(fetchFeed, 30000);
-        setInterval(refreshReportMarkers, 30000);
+        
+        // Poll for nearby reports every 30 seconds
+        setInterval(() => checkNearbyReports(), 30000);
       }).catch((err) => {
         console.error("Map initialization error:", err);
       });
