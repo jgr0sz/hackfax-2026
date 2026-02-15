@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-function LoginPage() {
+function LoginPage({ onLoginSuccess }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -54,6 +54,9 @@ function LoginPage() {
       if (!res.ok) {
         setError(data.error || 'Login failed');
         return;
+      }
+      if (onLoginSuccess) {
+        await onLoginSuccess();
       }
       navigate('/');
     } catch (err) {
