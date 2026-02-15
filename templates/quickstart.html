@@ -1,0 +1,535 @@
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: MIT-0 -->
+<html>
+  <head>
+    <link
+      href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body { margin: 0; }
+      #map { height: 100vh; position: relative; }
+      
+      button.maplibregl-ctrl-compass { display: none !important; }
+
+      /* Overlay UI */
+      .ui {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 10;
+        font-family: system-ui, sans-serif;
+        width: 340px;
+      }
+      .panel {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      }
+      .row { display: flex; gap: 8px; }
+      button, input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+      label { display:block; margin-top:10px; font-size: 12px; }
+
+      #form { display: none; margin-top: 10px; }
+      #status {
+        white-space: pre-wrap;
+        font-size: 12px;
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 10px;
+        background: #f6f6f6;
+        border: 1px solid #eee;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+
+    <!-- Overlay controls (map stays visible) -->
+    <div class="ui">
+      <div class="panel">
+        <div class="row">
+          <button id="reportBtn" type="button">Report incident (auto locate)</button>
+          <button id="manualBtn" type="button">Manual</button>
+        </div>
+
+        <div id="form">
+          <label>Date</label>
+          <input type="date" id="date" required />
+
+          <label>Severity</label>
+          <select id="severity" required>
+            <option value="">Select…</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+
+          <label>Details</label>
+          <textarea id="details" placeholder="What happened?" required></textarea>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="submitBtn" type="button">Submit</button>
+            <button id="cancelBtn" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <div id="status">Ready.</div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.min.js"></script>
+    <script>
+      let map;
+      let marker = null;
+      let coords = null; // { latitude, longitude, accuracyMeters } or null
+      let userLocationMarker = null; // persistent user location indicator
+
+      const statusEl = document.querySelector("#status");
+      const formEl = document.querySelector("#form");
+
+      const reportBtn = document.querySelector("#reportBtn");
+      const manualBtn = document.querySelector("#manualBtn");
+      const submitBtn = document.querySelector("#submitBtn");
+      const cancelBtn = document.querySelector("#cancelBtn");
+
+      const dateEl = document.querySelector("#date");
+      const severityEl = document.querySelector("#severity");
+      const detailsEl = document.querySelector("#details");
+
+      function setStatus(msg) { statusEl.textContent = msg; }
+
+      // Notification permission handling
+      function requestNotificationPermission() {
+        if (!("Notification" in window)) {
+          console.log("Browser does not support notifications");
+          return;
+        }
+
+        console.log("Notification permission status:", Notification.permission);
+
+        if (Notification.permission === "granted") {
+          console.log("Notification permission already granted, showing test");
+          showTestNotification();
+        } else if (Notification.permission !== "denied") {
+          console.log("Requesting notification permission...");
+          Notification.requestPermission().then((permission) => {
+            console.log("Permission result:", permission);
+            if (permission === "granted") {
+              console.log("Permission granted, showing test notification");
+              showTestNotification();
+            }
+          }).catch((err) => {
+            console.error("Permission request error:", err);
+          });
+        } else {
+          console.log("Notification permission was denied");
+        }
+      }
+
+      function showTestNotification() {
+        try {
+          console.log("Creating notification...");
+          
+          // Blur window momentarily to ensure notification shows
+          window.blur();
+          
+          const notification = new Notification("Incident Report System Ready", {
+            body: "Notifications enabled for incident alerts",
+            badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>📍</text></svg>",
+            requireInteraction: false,
+          });
+          
+          console.log("Notification created and displayed");
+          
+          notification.addEventListener("click", () => {
+            window.focus();
+            notification.close();
+          });
+          
+          notification.addEventListener("error", (err) => {
+            console.error("Notification error:", err);
+          });
+          
+          // Refocus the window after a short delay
+          setTimeout(() => window.focus(), 100);
+          
+          // Also show a visual banner as fallback
+          const banner = document.createElement("div");
+          banner.textContent = "✅ Notifications enabled!";
+          banner.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 9999;
+            font-weight: bold;
+          `;
+          document.body.appendChild(banner);
+          
+          setTimeout(() => banner.remove(), 3000);
+          
+        } catch (err) {
+          console.error("Error showing notification:", err);
+        }
+      }
+
+      function openForm() {
+        formEl.style.display = "block";
+        dateEl.valueAsDate = new Date();
+        detailsEl.focus();
+      }
+
+      function closeForm() {
+        formEl.style.display = "none";
+        severityEl.value = "";
+        detailsEl.value = "";
+      }
+
+      function setMarker(lat, lng) {
+        if (!marker) marker = new maplibregl.Marker();
+        marker.setLngLat([lng, lat]).addTo(map);
+        map.flyTo({ center: [lng, lat], zoom: 15 });
+      }
+
+      function getCoords() {
+        return new Promise((resolve, reject) => {
+          if (!("geolocation" in navigator)) {
+            return reject(new Error("Geolocation not supported by this browser."));
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracyMeters: pos.coords.accuracy,
+            }),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+        });
+      }
+
+      async function initializeMap() {
+        const apiKey = "v1.public.eyJqdGkiOiI5MmM5Y2JiZi01ODkzLTQ4YjctYjRhMi1kZmIzMDE5ODY0NTkifUQq73oCDjCVqFZmlUScpz49Y-DkCHQpY_G-1SUlUbQ6m7yfHjuHcnPuzJlCovp_09O2h2aeKtx8beFImNyzOwZpEFsMQNCwteVAdG6kVM23YJVKLi9iPuG_3wTEEqAglJJhutTweD8FBEBQu0avg_o98zkb_aQWxk8NaW29kmFH4OH9M2j_FpcFcy1eY3khSPHOzrGsGj9ySSfe7KCEYD9DWA8SE6L8dr5WwPJmC547IRca2fHiWhidrOvAEKlv0sngOtyTMMEFeXBcTcvY56aCs5lMgnxlzqu9TKKdA3qzJjmhG1SNVE8gTP0HYM-JUCYIIP-c7swEx16p-D3VOyw.ZWU0ZWIzMTktMWRhNi00Mzg0LTllMzYtNzlmMDU3MjRmYTkx";
+        const region = "us-east-1";
+
+        // Try to get user location, fallback to default
+        let mapCenter = [-123.1187, 49.2819]; // Default center
+        try {
+          const pos = await getCoords();
+          mapCenter = [pos.longitude, pos.latitude];
+          coords = pos; // Store initial user location
+          console.log("Map centered on user location:", mapCenter);
+        } catch (e) {
+          console.log("Could not get user location, using default:", e.message);
+        }
+
+        map = new maplibregl.Map({
+          container: "map",
+          center: mapCenter,
+          zoom: 15,
+          style: `https://maps.geo.${region}.amazonaws.com/v2/styles/Standard/descriptor?key=${apiKey}`,
+          validateStyle: false,
+        });
+
+        // Add zoom controls and user location button
+        map.addControl(new maplibregl.NavigationControl(), "top-left");
+        
+        // Custom center/pin button for user location
+        const centerBtn = document.createElement("button");
+        centerBtn.textContent = "📍";
+        centerBtn.style.cssText = `
+          position: absolute;
+          top: 14px;
+          left: 60px;
+          z-index: 100;
+          width: 40px;
+          height: 40px;
+          padding: 0;
+          margin: 0;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          background: white;
+          cursor: pointer;
+          font-size: 20px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+        centerBtn.addEventListener("click", async () => {
+          try {
+            const pos = await getCoords();
+            map.flyTo({ center: [pos.longitude, pos.latitude], zoom: 15 });
+            // Update or create persistent user location marker
+            if (userLocationMarker) {
+              userLocationMarker.setLngLat([pos.longitude, pos.latitude]);
+            } else {
+              userLocationMarker = new maplibregl.Marker({ color: "blue" })
+                .setLngLat([pos.longitude, pos.latitude])
+                .setPopup(new maplibregl.Popup().setHTML("<strong>You are here</strong>"))
+                .addTo(map);
+            }
+          } catch (e) {
+            setStatus("Could not get location: " + e.message);
+          }
+        });
+        document.getElementById("map").appendChild(centerBtn);
+
+        // Create user location marker once map is loaded
+        map.on("load", () => {
+          if (coords) {
+            userLocationMarker = new maplibregl.Marker({ color: "blue" })
+              .setLngLat([coords.longitude, coords.latitude])
+              .setPopup(new maplibregl.Popup().setHTML("<strong>You are here</strong>"))
+              .addTo(map);
+          }
+        });
+
+        // (Optional) allow user to click map to set report location
+        // Useful if geolocation is denied or if they want a different spot.
+        map.on("click", (e) => {
+          // Only set location if they are currently reporting (form open)
+          if (formEl.style.display !== "block") return;
+
+          coords = {
+            latitude: e.lngLat.lat,
+            longitude: e.lngLat.lng,
+            accuracyMeters: null,
+          };
+          setMarker(coords.latitude, coords.longitude);
+          setStatus(
+            `Location set from map click:\nlat=${coords.latitude.toFixed(6)} lng=${coords.longitude.toFixed(6)}\n\nFill in details and submit.`
+          );
+        });
+      }
+
+      reportBtn.addEventListener("click", async () => {
+        setStatus("Requesting location… (works on HTTPS or localhost)");
+        coords = null;
+
+        try {
+          coords = await getCoords();
+          setMarker(coords.latitude, coords.longitude);
+          
+          // Update or create persistent user location marker (blue)
+          if (userLocationMarker) {
+            userLocationMarker.setLngLat([coords.longitude, coords.latitude]);
+          } else {
+            userLocationMarker = new maplibregl.Marker({ color: "blue" })
+              .setLngLat([coords.longitude, coords.latitude])
+              .setPopup(new maplibregl.Popup().setHTML("<strong>You are here</strong>"))
+              .addTo(map);
+          }
+          
+          setStatus(
+            `Location captured:\n` +
+            `lat=${coords.latitude.toFixed(6)} lng=${coords.longitude.toFixed(6)} (±${Math.round(coords.accuracyMeters)}m)\n\n` +
+            `Tip: you can also click the map to adjust the pin.`
+          );
+          openForm();
+        } catch (e) {
+          setStatus(
+            `Could not get location: ${e.message || e}\n\n` +
+            `Click "Manual" then click on the map to drop a pin.`
+          );
+        }
+      });
+
+      manualBtn.addEventListener("click", () => {
+        coords = null; // force them to click map if they want a pin
+        setStatus("Manual report: fill in details. If you want a location, click on the map to drop a pin.");
+        openForm();
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        coords = null;
+        setStatus("Canceled.");
+        closeForm();
+      });
+
+      // Alert for nearby reports
+      async function checkNearbyReports() {
+        if (!coords || !coords.latitude || !coords.longitude) return;
+        
+        try {
+          const res = await fetch("/reports/nearby", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              radius_miles: 0.5
+            })
+          });
+          
+          if (!res.ok) return;
+          
+          const data = await res.json();
+          const nearby = data.nearby_reports || [];
+          
+          if (nearby.length > 0) {
+            const report = nearby[0].report;
+            const distance = nearby[0].distance_miles;
+            
+            console.log("API RESPONSE entire nearby[0]:", JSON.stringify(nearby[0], null, 2));
+            console.log("API RESPONSE report object:", report);
+            console.log("API RESPONSE report.severity:", report.severity);
+            console.log("API RESPONSE report.severity type:", typeof report.severity);
+            
+            const severity = report.severity || "unknown";
+            
+            console.log("API RESPONSE - Found report with severity:", severity);
+            
+            // Get emoji for severity
+            let severityEmoji = "⚠️";
+            if (severity === "low") severityEmoji = "🟡";
+            else if (severity === "medium") severityEmoji = "🟠";
+            else if (severity === "high") severityEmoji = "🔴";
+            else if (severity === "critical") severityEmoji = "🔴🔴";
+            
+            showAlertNotification(
+              `${severityEmoji} ${severity.toUpperCase()} - ${distance.toFixed(2)} miles away`,
+              `${report.details}`,
+              report
+            );
+          }
+        } catch (err) {
+          console.error("Error checking nearby reports:", err);
+        }
+      }
+
+      function showAlertNotification(title, body, report) {
+        // Determine colors based on severity level (already lowercase from form)
+        const severity = (report.severity || "medium");
+        let alertColor = "#ff4757"; // Default red for high
+        let shadowColor = "rgba(255, 71, 87, 0.4)";
+        
+        if (severity === "low") {
+          alertColor = "#ffa502";
+          shadowColor = "rgba(255, 165, 2, 0.4)";
+        } else if (severity === "medium") {
+          alertColor = "#ff6348";
+          shadowColor = "rgba(255, 99, 72, 0.4)";
+        } else if (severity === "high") {
+          alertColor = "#ff4757";
+          shadowColor = "rgba(255, 71, 87, 0.4)";
+        } else if (severity === "critical") {
+          alertColor = "#c23030";
+          shadowColor = "rgba(194, 48, 48, 0.4)";
+        }
+        
+        // Show visual alert banner
+        const alert = document.createElement("div");
+        alert.style.cssText = `
+          position: fixed;
+          top: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, ${alertColor} 0%, ${alertColor} 100%);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px ${shadowColor};
+          z-index: 9998;
+          max-width: 400px;
+          font-weight: bold;
+          cursor: pointer;
+          animation: slideDown 0.3s ease-out;
+        `;
+        alert.innerHTML = `<div style="font-size: 16px; margin-bottom: 8px;">${title}</div><div style="font-size: 13px; opacity: 0.9;">${body}</div>`;
+        
+        alert.addEventListener("click", () => {
+          if (report.location && report.location.longitude) {
+            map.flyTo({ 
+              center: [report.location.longitude, report.location.latitude], 
+              zoom: 16 
+            });
+          }
+          alert.remove();
+        });
+        
+        document.body.appendChild(alert);
+        
+        // Auto-remove after 6 seconds
+        setTimeout(() => alert.remove(), 6000);
+        
+        // Also show browser notification
+        if (Notification.permission === "granted") {
+          new Notification(title, { body: body });
+        }
+      }
+      
+      // Add CSS animation
+      const style = document.createElement("style");
+      style.textContent = `
+        @keyframes slideDown {
+          from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      submitBtn.addEventListener("click", async () => {
+        if (!dateEl.value) return setStatus("Pick a date.");
+        if (!severityEl.value) return setStatus("Pick a severity.");
+        if (!detailsEl.value.trim()) return setStatus("Enter details.");
+
+        const payload = {
+          date: dateEl.value,
+          severity: severityEl.value,
+          location: coords ?? { latitude: null, longitude: null, accuracyMeters: null },
+          details: detailsEl.value.trim(),
+        };
+
+        console.log("SUBMIT - Severity selected:", severityEl.value);
+        setStatus("Submitting report…");
+
+        try {
+          const res = await fetch("/report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(body)}`);
+
+          setStatus("Submitted ✅ (report saved)");
+          closeForm();
+          
+          // Check for other nearby reports before clearing coords
+          checkNearbyReports();
+          
+          coords = null;
+        } catch (err) {
+          setStatus("Submit failed ❌\n" + err.message);
+        }
+      });
+
+      // Initialize map and request notifications
+      initializeMap().then(() => {
+        // Request notification permission after map loads
+        setTimeout(() => requestNotificationPermission(), 500);
+        
+        // Poll for nearby reports every 30 seconds
+        setInterval(() => checkNearbyReports(), 30000);
+      }).catch((err) => {
+        console.error("Map initialization error:", err);
+      });
+    </script>
+  </body>
+</html>
